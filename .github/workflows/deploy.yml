@@ -1,0 +1,24 @@
+name: Deploy Node App via SSH
+on:
+  push:
+    branches: [ main ]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci && npm run build
+      - name: Pack app
+        run: tar -czf app.tar.gz --exclude=.git .
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.IK_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          echo -e "Host ik\n  HostName ${{ secrets.IK_HOST }}\n  User ${{ secrets.IK_USER }}\n  StrictHostKeyChecking no" > ~/.ssh/config
+      - name: Upload & restart
+        run: |
+          scp app.tar.gz ik:~/app.tar.gz
+          ssh ik 'mkdir -p ~/app && tar -xzf ~/app.tar.gz -C ~/app && cd ~/app && npm ci --omit=dev && pm2 restart all || pm2 start "npm -- start"'
