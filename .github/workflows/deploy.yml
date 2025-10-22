@@ -1,24 +1,64 @@
-name: Deploy Node App via SSH
+name: Deploy to Infomaniak (Node App via SSH)
+
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]   # adapte si besoin
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm ci && npm run build
-      - name: Pack app
-        run: tar -czf app.tar.gz --exclude=.git .
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20   # ou 18 selon ton app
+
+      # Si ton app est dans un sous-dossier, dé-commente et adapte:
+      # - name: Move to subdirectory
+      #   run: cd apps/site && echo "Using subfolder"  # just placeholder
+      #   working-directory: apps/site
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # On enlève .git pour un tar propre (évite les soucis de --exclude)
+      - name: Pack artifacts
+        run: |
+          rm -rf .git
+          tar -czf app.tar.gz .
+
       - name: Install SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.IK_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          # Optionnel: éviter l'interactif sur la première connexion
           echo -e "Host ik\n  HostName ${{ secrets.IK_HOST }}\n  User ${{ secrets.IK_USER }}\n  StrictHostKeyChecking no" > ~/.ssh/config
-      - name: Upload & restart
+
+      - name: Upload package to server
+        run: scp app.tar.gz ik:~/app.tar.gz
+
+      - name: Deploy on server
         run: |
-          scp app.tar.gz ik:~/app.tar.gz
-          ssh ik 'mkdir -p ~/app && tar -xzf ~/app.tar.gz -C ~/app && cd ~/app && npm ci --omit=dev && pm2 restart all || pm2 start "npm -- start"'
+          ssh ik '
+            set -e
+            mkdir -p "${IK_APP_DIR:-~/app}"
+            tar -xzf ~/app.tar.gz -C "${IK_APP_DIR:-~/app}"
+            cd "${IK_APP_DIR:-~/app}"
+            # Installe uniquement les deps prod pour l'exécution
+            npm ci --omit=dev
+            # Redémarre l’app
+            # 1) Si ton environnement utilise pm2 et qu’un process existe déjà:
+            pm2 restart all || true
+            # 2) Sinon, démarre via pm2 en pointant sur npm start:
+            pm2 start "npm -- start" --name microinformatic --update-env || true
+          '
+        env:
+          IK_APP_DIR: ${{ secrets.IK_APP_DIR }}
