@@ -38,19 +38,23 @@ jobs:
         run: tar -C deploy -czf app.tar.gz .
 
       # === Connexion SSH sécurisée (clé privée) ===
-      - name: Install SSH key
+      - name: Start ssh-agent and add key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.IK_SSH_KEY }}
+
+      - name: Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.IK_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          echo -e "Host ik\n  HostName ${{ secrets.IK_HOST }}\n  User ${{ secrets.IK_USER }}\n  StrictHostKeyChecking no" > ~/.ssh/config
+          ssh-keyscan -H "${{ secrets.IK_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Upload package to server
-        run: scp app.tar.gz ik:~/app.tar.gz
+        run: scp app.tar.gz ${{ secrets.IK_USER }}@${{ secrets.IK_HOST }}:~/app.tar.gz
 
       - name: Deploy on server
         run: |
-          ssh ik '
+          ssh ${{ secrets.IK_USER }}@${{ secrets.IK_HOST }} '
             set -e
             mkdir -p ~/app
             tar -xzf ~/app.tar.gz -C ~/app
@@ -63,3 +67,4 @@ jobs:
               nohup npm start >/dev/null 2>&1 &
             fi
           '
+
