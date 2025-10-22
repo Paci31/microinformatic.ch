@@ -48,6 +48,13 @@ jobs:
           ssh-private-key: |
             ${{ secrets.IK_SSH_KEY }}
 
+      - name: Show loaded public key (exact)
+        run: |
+          echo "----- BEGIN OFFERED PUBLIC KEY -----"
+          ssh-add -L
+          echo "----- END OFFERED PUBLIC KEY -----"
+
+
       - name: Show loaded public keys (debug)
         run: ssh-add -L || true
 
