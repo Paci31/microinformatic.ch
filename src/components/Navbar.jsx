@@ -1,13 +1,12 @@
 import { NavLink, Link } from "react-router-dom";
 import { useState } from "react";
-//import ThemeToggle from "./ThemeToggle.jsx";
+import ThemeToggle from "./ThemeToggle.jsx";
 import { Menu } from "lucide-react";
 import Logo from "../assets/logo.png";
 
 const linkBase =
-  "px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800";
-const linkActive =
-  "text-slate-900 bg-slate-100 dark:text-white dark:bg-slate-800";
+  "px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition";
+const linkActive = "text-slate-900 bg-slate-100";
 
 export default function Navbar() {
   const navClass = ({ isActive }) =>
@@ -15,7 +14,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:bg-slate-900/70 dark:border-slate-800">
+    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container-xl flex items-center justify-between py-3">
         <Link className="flex items-center gap-3" to="/">
           <img
@@ -34,11 +33,16 @@ export default function Navbar() {
           <NavLink to="/solutions" className={navClass}>
             Solutions
           </NavLink>
+          {/*}
           <NavLink to="/technologies" className={navClass}>
             Technologies
           </NavLink>
+          */}
           <NavLink to="/references" className={navClass}>
             Références
+          </NavLink>
+          <NavLink to="/rse" className={navClass}>
+            RSE
           </NavLink>
           <NavLink to="/carrieres" className={navClass}>
             Carrières
@@ -46,20 +50,19 @@ export default function Navbar() {
           <NavLink to="/contact" className={navClass}>
             Contact
           </NavLink>
-          {/* <ThemeToggle /> */}
+          {/* ThemeToggle est neutralisé, on peut aussi le retirer si tu préfères */}
         </nav>
-        <div className="md:hidden flex items-center gap-2">
-          {/* <ThemeToggle /> */}
+        <div className="md:hidden flex items-center">
           <button
             onClick={() => setOpen((v) => !v)}
-            className="rounded-xl p-2 border border-slate-300 dark:border-slate-700"
+            className="rounded-xl p-2 border border-slate-300"
             aria-label="Menu">
             <Menu className="h-5 w-5" />
           </button>
         </div>
       </div>
       {open && (
-        <div className="md:hidden border-t border-slate-200 dark:border-slate-800">
+        <div className="md:hidden border-t border-slate-200">
           <div className="container-xl py-2 flex flex-col gap-1">
             <NavLink
               to="/"
@@ -91,6 +94,12 @@ export default function Navbar() {
               className={navClass}
               onClick={() => setOpen(false)}>
               Références
+            </NavLink>
+            <NavLink
+              to="/rse"
+              className={navClass}
+              onClick={() => setOpen(false)}>
+              RSE
             </NavLink>
             <NavLink
               to="/carrieres"
