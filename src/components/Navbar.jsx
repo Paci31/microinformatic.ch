@@ -1,6 +1,6 @@
 import { NavLink, Link } from "react-router-dom";
 import { useState } from "react";
-import ThemeToggle from "./ThemeToggle.jsx";
+//import ThemeToggle from "./ThemeToggle.jsx";
 import { Menu } from "lucide-react";
 import Logo from "../assets/logo.png";
 
@@ -46,10 +46,10 @@ export default function Navbar() {
           <NavLink to="/contact" className={navClass}>
             Contact
           </NavLink>
-          <ThemeToggle />
+          {/* <ThemeToggle /> */}
         </nav>
         <div className="md:hidden flex items-center gap-2">
-          <ThemeToggle />
+          {/* <ThemeToggle /> */}
           <button
             onClick={() => setOpen((v) => !v)}
             className="rounded-xl p-2 border border-slate-300 dark:border-slate-700"
