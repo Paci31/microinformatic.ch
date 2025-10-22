@@ -1,0 +1,99 @@
+name: Deploy to Infomaniak (Node App via SSH key)
+
+on:
+  push:
+    branches: [ main ]   # adapte si besoin
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Clone le dépôt
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2️⃣ Installe Node.js
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 3️⃣ Installe les dépendances
+      - name: Install dependencies
+        run: npm ci
+
+      # 4️⃣ Build l’application React
+      - name: Build app
+        run: npm run build
+
+      # 5️⃣ Crée un dossier "deploy" propre avec uniquement ce qu’il faut
+      - name: Create deploy staging
+        run: |
+          rm -rf deploy
+          mkdir -p deploy
+          cp -a dist deploy/dist
+          cp package.json deploy/package.json
+          if [ -f package-lock.json ]; then cp package-lock.json deploy/package-lock.json; fi
+          if [ -f server.js ]; then cp server.js deploy/server.js; fi
+          if [ -f .env.production ]; then cp .env.production deploy/.env; fi
+
+      # 6️⃣ Crée une archive stable (tar.gz)
+      - name: Pack artifacts
+        run: tar -C deploy -czf app.tar.gz .
+
+      - name: Start ssh-agent and add key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.IK_SSH_KEY }}
+
+      - name: Show loaded public key (exact)
+        run: |
+          echo "----- BEGIN OFFERED PUBLIC KEY -----"
+          ssh-add -L
+          echo "----- END OFFERED PUBLIC KEY -----"
+
+
+      - name: Show loaded public keys (debug)
+        run: ssh-add -L || true
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          if [ -n "${{ secrets.IK_PORT }}" ]; then
+            ssh-keyscan -p ${{ secrets.IK_PORT }} -H "${{ secrets.IK_HOST }}" >> ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "${{ secrets.IK_HOST }}" >> ~/.ssh/known_hosts
+          fi
+
+      # ❗️IMPORTANT: on retire -o IdentitiesOnly=yes (sinon l'agent est ignoré)
+      - name: Test SSH connectivity (verbose)
+        run: |
+          ssh -vvv ${{ secrets.IK_USER }}@${{ secrets.IK_HOST }} ${{
+            secrets.IK_PORT && format('-p {0}', secrets.IK_PORT) || '' }} 'echo OK'
+
+      - name: Upload package to server
+        run: |
+          scp ${{
+            secrets.IK_PORT && format('-P {0}', secrets.IK_PORT) || '' }} \
+          app.tar.gz ${{ secrets.IK_USER }}@${{ secrets.IK_HOST }}:~/app.tar.gz
+
+      - name: Deploy on server
+        run: |
+          ssh ${{ secrets.IK_USER }}@${{ secrets.IK_HOST }} ${{
+            secrets.IK_PORT && format('-p {0}', secrets.IK_PORT) || '' }} '
+            set -e
+            mkdir -p ~/app
+            tar -xzf ~/app.tar.gz -C ~/app
+            cd ~/app
+            npm ci --omit=dev
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 restart microinformatic || pm2 start "npm -- start" --name microinformatic --update-env
+            else
+              pkill -f "node server.js" || true
+              nohup npm start >/dev/null 2>&1 &
+            fi
+            echo "✅ Deploy completed."
+          '
+
