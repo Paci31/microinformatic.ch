@@ -3,28 +3,23 @@ import express from "express";
 import path from "path";
 import compression from "compression";
 import history from "connect-history-api-fallback";
+import { fileURLToPath } from "url";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const app = express();
-const port = process.env.PORT || 3000;
-const __dirname = path.resolve();
-const dist = path.join(__dirname, "dist");
 
-// Fallback SPA (React Router)
-app.use(history());
+// ⚠️ Port FIXE (à faire correspondre avec le Manager Infomaniak)
+const PORT = Number(process.env.APP_PORT ?? 3000);
 
-// Static + compression
+app.use(history()); // SPA fallback (React Router)
 app.use(compression());
 app.use(
-  express.static(dist, {
+  express.static(path.join(__dirname, "dist"), {
     index: "index.html",
     maxAge: "1y",
-    extensions: ["html"],
   })
 );
 
-// Healthcheck (utile dans les logs)
-app.get("/health", (req, res) => res.status(200).send("OK"));
-
-app.listen(port, "0.0.0.0", () => {
-  console.log(`✅ Server listening on http://0.0.0.0:${port}`);
-});
+app.get("/health", (_, res) => res.send("OK"));
+app.listen(PORT, "0.0.0.0", () => console.log("Listening on 0.0.0.0:" + PORT));
